@@ -1182,6 +1182,7 @@ source = { editable = "." }
 dependencies = [
     { name = "datasets" },
     { name = "mlx-lm" },
+    { name = "numpy" },
 ]
 
 [package.dev-dependencies]
@@ -1193,6 +1194,7 @@ dev = [
 requires-dist = [
     { name = "datasets", specifier = ">=5.2.0" },
     { name = "mlx-lm", specifier = ">=0.32.2" },
+    { name = "numpy", specifier = ">=2.5.5" },
 ]
 
 [package.metadata.requires-dev]

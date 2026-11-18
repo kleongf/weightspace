@@ -6,6 +6,7 @@ __pycache__/
 models/
 *.safetensors
 *.npz
+!*.patch.npz
 experiments/*/runs/**/transcript*
 experiments/*/runs/**/weights/
 surveys/raw/

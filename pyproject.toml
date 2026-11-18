@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "datasets>=5.2.0",
     "mlx-lm>=0.32.2",
+    "numpy>=2.5.5",
 ]
 
 [project.scripts]
@@ -20,3 +21,5 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not slow'"
+markers = ["slow: runs the real Target (minutes); select with -m slow"]

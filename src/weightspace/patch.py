@@ -50,14 +50,13 @@ def as_float32(values: mx.array) -> np.ndarray:
     return np.array(values.astype(mx.float32))
 
 
-def diff(model: nn.Module, edited: Mapping[str, np.ndarray | mx.array]) -> Patch:
-    """The Patch that turns the model's current weights into `edited`, after rounding `edited` to the model's dtype."""
-    params = parameters(model)
+def diff(baseline: Mapping[str, mx.array], edited: Mapping[str, np.ndarray | mx.array]) -> Patch:
+    """The Patch that turns `baseline` tensors into `edited` ones, after rounding `edited` to the baseline's dtype."""
     edits = {}
     for name, values in edited.items():
-        if name not in params:
+        if name not in baseline:
             raise KeyError(f"{name} is not a tensor of this model")
-        old = params[name]
+        old = baseline[name]
         new = mx.array(values)
         if new.shape != old.shape:
             raise ValueError(f"{name} has shape {new.shape}, expected {old.shape}")

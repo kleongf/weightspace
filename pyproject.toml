@@ -5,6 +5,7 @@ description = "A lab for testing weight-space programming on small models."
 requires-python = ">=3.12"
 dependencies = [
     "datasets>=5.2.0",
+    "mcp>=2.3.0",
     "mlx-lm>=0.32.2",
     "numpy>=2.5.5",
 ]

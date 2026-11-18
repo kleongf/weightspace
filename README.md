@@ -13,7 +13,7 @@ experiments/         one folder per Experiment
     card.md          hypothesis, setup and success criterion, frozen before Run 1
     runs/            one record per Run (raw transcripts and weights are git-ignored)
 surveys/             Baseline scores on candidate tasks, used to choose an Experiment's task
-src/weightspace/     the harness: tasks and scorers, Target loading, and later the sandbox, evaluator and controls
+src/weightspace/     the harness: tasks and scorers, Target loading, Patches and controls, and the Editor's MCP server
 tests/               checks that keep Experiments fair (card rules, Eval budget, Held-out set isolation)
 ```
 
@@ -24,7 +24,7 @@ tests/               checks that keep Experiments fair (card rules, Eval budget,
 3. Every Run has a hard Eval budget, turn limit and spend cap.
 4. A result counts only if it meets the card's Success criterion against its Random-edit controls on the Held-out set.
 
-`uv run pytest` checks the rules that can be checked automatically.
+`uv run pytest` checks the rules that can be checked automatically, including the sandbox's isolation (it loads the Target, about 30 seconds). `uv run pytest -m slow` adds the end-to-end Patch checks (about 6 minutes).
 
 ## Commands
 

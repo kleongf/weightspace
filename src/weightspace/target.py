@@ -3,7 +3,7 @@ from mlx_lm import load
 from mlx_lm.generate import BatchGenerator
 from mlx_lm.sample_utils import make_sampler
 
-from weightspace.tasks import Completion
+from weightspace.completion import Completion
 
 END_OF_REASONING = "</think>"
 QWEN_RECOMMENDED = {"temp": 0.6, "top_p": 0.95, "top_k": 20}

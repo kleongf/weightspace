@@ -27,17 +27,17 @@ def edited(model, **changes) -> dict[str, np.ndarray]:
 
 
 def test_unchanged_weights_give_an_empty_patch(model):
-    assert diff(model, {"weight": weights(model)}).size == 0
+    assert diff(parameters(model), {"weight": weights(model)}).size == 0
 
 
 def test_changes_below_bf16_precision_are_not_edits(model):
     w = weights(model)
     w.flat[3] += 1e-6
-    assert diff(model, {"weight": w}).size == 0
+    assert diff(parameters(model), {"weight": w}).size == 0
 
 
 def test_patch_records_exactly_the_changed_positions(model):
-    patch = diff(model, edited(model, at3=2.0, at40=-1.5))
+    patch = diff(parameters(model), edited(model, at3=2.0, at40=-1.5))
     assert patch.size == 2
     assert patch.edits["weight"].indices.tolist() == [3, 40]
     assert patch.edits["weight"].after.tolist() == [2.0, -1.5]
@@ -46,13 +46,13 @@ def test_patch_records_exactly_the_changed_positions(model):
 def test_applying_a_patch_changes_the_output_and_restoring_undoes_it(model):
     x = mx.ones((1, 16), dtype=mx.bfloat16)
     original = np.array(model(x).astype(mx.float32))
-    with patched(model, diff(model, edited(model, at0=5.0))):
+    with patched(model, diff(parameters(model), edited(model, at0=5.0))):
         assert not np.array_equal(np.array(model(x).astype(mx.float32)), original)
     assert np.array_equal(np.array(model(x).astype(mx.float32)), original)
 
 
 def test_a_patch_cannot_be_applied_twice(model):
-    patch = diff(model, edited(model, at0=5.0))
+    patch = diff(parameters(model), edited(model, at0=5.0))
     apply(model, patch)
     with pytest.raises(ValueError, match="already applied"):
         apply(model, patch)
@@ -60,11 +60,11 @@ def test_a_patch_cannot_be_applied_twice(model):
 
 def test_non_finite_edits_are_refused(model):
     with pytest.raises(ValueError, match="NaN"):
-        diff(model, edited(model, at0=np.nan))
+        diff(parameters(model), edited(model, at0=np.nan))
 
 
 def test_patch_survives_saving_and_loading(model, tmp_path):
-    patch = diff(model, edited(model, at3=2.0, at40=-1.5))
+    patch = diff(parameters(model), edited(model, at3=2.0, at40=-1.5))
     patch.save(tmp_path / "p.patch.npz")
     loaded = Patch.load(tmp_path / "p.patch.npz")
     assert loaded.size == 2
@@ -73,7 +73,7 @@ def test_patch_survives_saving_and_loading(model, tmp_path):
 
 
 def test_random_control_moves_the_same_deltas_to_new_positions(model):
-    patch = diff(model, edited(model, at3=4.0, at40=-4.0, at100=8.0))
+    patch = diff(parameters(model), edited(model, at3=4.0, at40=-4.0, at100=8.0))
     control = random_control(model, patch, seed=1)
     assert control.edits.keys() == patch.edits.keys()
     assert control.size == patch.size

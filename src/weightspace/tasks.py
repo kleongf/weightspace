@@ -6,6 +6,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from weightspace.completion import Completion
+
 Split = Literal["survey", "practice", "held-out"]
 SURVEY_SIZE = 40
 
@@ -15,15 +17,6 @@ class Example:
     id: str
     prompt: str
     reference: Any
-
-
-@dataclass(frozen=True)
-class Completion:
-    text: str
-    answer: str | None
-    finished: bool
-    tokens: int
-    looped: bool = False
 
 
 @dataclass(frozen=True)

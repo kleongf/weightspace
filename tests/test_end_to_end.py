@@ -33,7 +33,7 @@ def logits(target):
 def test_do_nothing_patch_scores_exactly_like_the_baseline(target):
     examples = TASKS["json-extraction"].examples("practice", 8)
     name = "language_model.model.layers.0.mlp.gate_proj.weight"
-    nothing = diff(target.model, {name: parameters(target.model)[name]})
+    nothing = diff(parameters(target.model), {name: parameters(target.model)[name]})
     assert nothing.size == 0
     baseline = strict_scores(target, examples)
     with patched(target.model, nothing):
@@ -47,7 +47,7 @@ def test_a_random_patch_is_fully_undone(target):
     before = logits(target)
     tensor = np.array(parameters(target.model)[name].astype(mx.float32))
     tensor.flat[np.arange(0, tensor.size, 997)] += 0.5
-    patch = diff(target.model, {name: tensor})
+    patch = diff(parameters(target.model), {name: tensor})
     control = random_control(target.model, patch, seed=0)
     for edit in (patch, control):
         with patched(target.model, edit):

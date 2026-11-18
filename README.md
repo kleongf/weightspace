@@ -35,6 +35,8 @@ uv run ws list               every Experiment with its status, Run count and unf
 uv run ws survey             score the Baseline on every candidate task, with thinking off and on
 uv run ws run <number>       start a Run: a headless Editor with only the sandbox and evaluate
                              (--editor claude|codex, default claude)
+uv run ws score <number> <run>
+                             score a finished Run's final Patch on the Held-out set
 ```
 
 `ws survey` writes a table to `surveys/` and every completion to `surveys/raw/` (git-ignored). It expects the Target in `models/Qwen3.5-0.8B`, downloaded from Hugging Face.
@@ -42,6 +44,8 @@ uv run ws run <number>       start a Run: a headless Editor with only the sandbo
 `ws run` reads the Experiment's `run.json` and `editor.md`, works in `~/weightspace-runs/` (outside the repo, per ADR 0002), and copies the record into the Experiment's `runs/` when the Editor stops. `ws run <number> --dry-run` checks the plumbing with 2 turns and one 2-example evaluation, and keeps nothing in the repo.
 
 A real Run needs the Mac on power and 3 GB of free disk. Only the best Patch so far is kept, and `evaluate` refuses a Patch that would leave less than 1 GB free.
+
+`ws score` takes the final Patch the Run's log names as best and scores it on the Held-out set with each Random-edit control and the Baseline. It also scores a carry-over task, set in `run.json`'s `scoring` block. It writes each scoring to the record's `scores/` folder as it finishes, so an interrupted scoring resumes, and the verdict to `score.json`. The Baseline's scorings sit in the Experiment's `baseline/` folder, made once and shared by every Run. Scoring 0001's settings takes about 4.5 hours, and it refuses to start while a Run is using the Target.
 
 Two Editors are supported, each on its own subscription with no API key. `claude` runs `claude -p`. `codex` runs `codex exec` under `sandbox-exec`, with a fresh `CODEX_HOME` per Run that borrows only your login. `ws` finds Codex at `$WS_CODEX`, then on `PATH`, then inside the ChatGPT app. Both reach the same local MCP server over HTTP on 127.0.0.1, at a secret path that changes every Run.
 

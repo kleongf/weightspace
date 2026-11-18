@@ -60,6 +60,10 @@ _Avoid_: soft score, relaxed score
 A Patch that touches the same number of weights as the Editor's final Patch, chosen at random, and scored on the Held-out set for comparison.
 _Avoid_: null patch, random baseline
 
+**Carry-over**:
+A Patch's score on a second task it was not written for, next to the Baseline's, showing whether its effect spreads beyond the Experiment's task.
+_Avoid_: transfer, side effect
+
 **Fine-tune baseline**:
 A LoRA fine-tune of the Target with a budget matched to a Run, scored alongside the Runs for comparison.
 _Avoid_: training baseline, gradient baseline

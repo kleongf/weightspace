@@ -10,6 +10,7 @@
       "effort": "high"
     }
   },
+  "scoring": {"held_out": 100, "controls": 5, "carry_over_task": "gsm8k-answer-line", "carry_over": 50},
   "session": {
     "task": "json-extraction",
     "model": "models/Qwen3.5-0.8B",

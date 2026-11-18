@@ -114,6 +114,32 @@ def run_editor(args: argparse.Namespace) -> int:
     return 0 if outcome["status"] == "success" else 1
 
 
+def run_score(args: argparse.Namespace) -> int:
+    import os
+    import subprocess
+
+    from weightspace.run import machine_state
+    from weightspace.score import ScorePlan, describe, score_run
+    from weightspace.session import RunConfig
+    from weightspace.target import Target
+
+    folder = find(args.experiment)
+    record = folder / "runs" / args.run
+    if not record.is_dir():
+        runs = sorted(p.name for p in (folder / "runs").iterdir() if p.is_dir())
+        raise CliError(f"{folder.name} has no Run {args.run!r}; it has {runs or 'none yet'}")
+    if subprocess.run(["/usr/bin/pgrep", "-f", r"weightspace\.(server|worker)"], capture_output=True).returncode == 0:
+        raise CliError("a Run is in progress, and this Mac has memory for one Target at a time; score after it ends")
+    if machine_state()[1]:
+        print("warning: the Mac is on battery; scoring takes hours, and it pauses if the Mac sleeps")
+    subprocess.Popen(["/usr/bin/caffeinate", "-i", "-s", "-w", str(os.getpid())])
+    plan = ScorePlan.load(folder / "run.json")
+    target = Target(RunConfig.load(record / "config.json").model)
+    print(describe(score_run(record, plan, target)))
+    print(f"wrote {record / 'score.json'}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ws", description="Run weightspace experiments.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -132,8 +158,13 @@ def main(argv: list[str] | None = None) -> int:
     run_parser.add_argument("--editor", choices=["claude", "codex"], default="claude")
     run_parser.add_argument("--dry-run", action="store_true", help="2 turns, 1 tiny evaluation, kept outside the experiment")
     run_parser.add_argument("--budget-usd", type=float, default=None, help="override the Editor's Spend cap (Claude only)")
+    score_parser = commands.add_parser("score", help="score a finished Run's final Patch on the Held-out set; resumes if interrupted")
+    score_parser.add_argument("experiment")
+    score_parser.add_argument("run", help="the Run's folder name, like claude-01")
     args = parser.parse_args(argv)
     try:
+        if args.command == "score":
+            return run_score(args)
         if args.command == "survey":
             return run_survey(args)
         if args.command == "run":

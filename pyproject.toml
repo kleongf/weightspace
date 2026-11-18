@@ -1,0 +1,19 @@
+[project]
+name = "weightspace"
+version = "0.0.0"
+description = "A lab for testing weight-space programming on small models."
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+ws = "weightspace.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

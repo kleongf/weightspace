@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+
+# Model weights and raw run output stay local
+models/
+*.safetensors
+*.npz
+experiments/*/runs/**/transcript*
+experiments/*/runs/**/weights/

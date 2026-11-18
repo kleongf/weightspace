@@ -1,6 +1,7 @@
 import argparse
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 from weightspace import card
@@ -69,14 +70,40 @@ def listing() -> list[str]:
     return rows
 
 
+def run_survey(args: argparse.Namespace) -> int:
+    from weightspace import survey
+    from weightspace.tasks import TASKS
+
+    names = args.tasks or list(TASKS)
+    unknown = set(names) - set(TASKS)
+    if unknown:
+        raise CliError(f"unknown tasks: {sorted(unknown)}; choose from {sorted(TASKS)}")
+    modes = {"off": [False], "on": [True], "both": [False, True]}[args.thinking]
+    stem = "-".join([date.today().isoformat(), Path(args.model).name, *(args.tasks or []), args.thinking, "sampled" if args.sampled else "greedy"])
+    rows = survey.survey(args.model, names, args.n, modes, Path("surveys/raw") / f"{stem}.jsonl", args.batch_size, args.sampled)
+    path = Path("surveys") / f"{stem}.md"
+    path.write_text(survey.report(rows, args.model, args.n, args.sampled))
+    print(f"wrote {path}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ws", description="Run weightspace experiments.")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("new", help="start an experiment from the card template").add_argument("slug")
     commands.add_parser("freeze", help="lock a filled card before Run 1").add_argument("experiment")
     commands.add_parser("list", help="show every experiment and its status")
+    survey_parser = commands.add_parser("survey", help="score the Baseline on candidate tasks")
+    survey_parser.add_argument("--model", default="models/Qwen3.5-0.8B")
+    survey_parser.add_argument("--n", type=int, default=40, help="examples per task")
+    survey_parser.add_argument("--tasks", nargs="+", default=None, help="task names (default: all)")
+    survey_parser.add_argument("--thinking", choices=["off", "on", "both"], default="both")
+    survey_parser.add_argument("--batch-size", type=int, default=4, help="larger is faster but swaps on 16 GB")
+    survey_parser.add_argument("--sampled", action="store_true", help="use Qwen's recommended sampling instead of greedy")
     args = parser.parse_args(argv)
     try:
+        if args.command == "survey":
+            return run_survey(args)
         if args.command == "new":
             print(f"created {new(args.slug)}")
         elif args.command == "freeze":

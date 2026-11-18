@@ -3,7 +3,10 @@ name = "weightspace"
 version = "0.0.0"
 description = "A lab for testing weight-space programming on small models."
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "datasets>=5.2.0",
+    "mlx-lm>=0.32.2",
+]
 
 [project.scripts]
 ws = "weightspace.cli:main"

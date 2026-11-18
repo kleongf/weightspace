@@ -12,7 +12,8 @@ experiments/         one folder per Experiment
   NNNN-slug/
     card.md          hypothesis, setup and success criterion, frozen before Run 1
     runs/            one record per Run (raw transcripts and weights are git-ignored)
-src/weightspace/     the harness: weight sandbox, evaluator, controls
+surveys/             Baseline scores on candidate tasks, used to choose an Experiment's task
+src/weightspace/     the harness: tasks and scorers, Target loading, and later the sandbox, evaluator and controls
 tests/               checks that keep Experiments fair (card rules, Eval budget, Held-out set isolation)
 ```
 
@@ -31,7 +32,10 @@ tests/               checks that keep Experiments fair (card rules, Eval budget,
 uv run ws new <slug>         start an Experiment from the card template
 uv run ws freeze <number>    lock a filled card before Run 1 (refuses unfilled sections)
 uv run ws list               every Experiment with its status, Run count and unfilled sections
+uv run ws survey             score the Baseline on every candidate task, with thinking off and on
 ```
+
+`ws survey` writes a table to `surveys/` and every completion to `surveys/raw/` (git-ignored). It expects the Target in `models/Qwen3.5-0.8B`, downloaded from Hugging Face.
 
 ## Machine
 

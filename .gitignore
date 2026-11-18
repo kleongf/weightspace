@@ -8,3 +8,4 @@ models/
 *.npz
 experiments/*/runs/**/transcript*
 experiments/*/runs/**/weights/
+surveys/raw/

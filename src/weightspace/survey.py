@@ -33,7 +33,7 @@ def survey(model_path: str, task_names: list[str], n: int, modes: list[bool], ra
     with raw.open("w") as log:
         for name in task_names:
             task = TASKS[name]
-            examples = task.survey_examples(n)
+            examples = task.examples("survey", n)
             for thinking in modes:
                 started = time.monotonic()
                 completions = target.complete([e.prompt for e in examples], thinking=thinking, max_tokens=MAX_TOKENS[thinking], batch_size=batch_size, sampled=sampled)

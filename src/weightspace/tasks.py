@@ -4,7 +4,10 @@ import re
 import string
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
+
+Split = Literal["survey", "practice", "held-out"]
+SURVEY_SIZE = 40
 
 
 @dataclass(frozen=True)
@@ -20,12 +23,13 @@ class Completion:
     answer: str | None
     finished: bool
     tokens: int
+    looped: bool = False
 
 
 @dataclass(frozen=True)
 class Task:
     name: str
-    survey_examples: Callable[[int], list[Example]]
+    examples: Callable[[Split, int], list[Example]]
     strict: Callable[[Example, Completion], float]
     lenient: Callable[[Example, Completion], float]
 
@@ -45,13 +49,22 @@ def as_number(text: str) -> float | None:
 ANSWER_LINE = re.compile(r"^Answer:\s*\$?(-?[\d,]+(?:\.\d+)?)\s*$")
 
 
-def gsm8k_examples(n: int) -> list[Example]:
+def dataset_rows(path: str, config: str | None, split: Split, n: int, held_out_split: str):
     from datasets import load_dataset
 
-    rows = load_dataset("openai/gsm8k", "main", split="train").shuffle(seed=0).select(range(n))
+    if split == "held-out":
+        return held_out_split, 0, load_dataset(path, config, split=held_out_split).shuffle(seed=0).select(range(n))
+    start = 0 if split == "survey" else SURVEY_SIZE
+    if split == "survey" and n > SURVEY_SIZE:
+        raise ValueError(f"survey uses at most {SURVEY_SIZE} examples so practice examples stay unseen")
+    return "train", start, load_dataset(path, config, split="train").shuffle(seed=0).select(range(start, start + n))
+
+
+def gsm8k_examples(split: Split, n: int) -> list[Example]:
+    source, start, rows = dataset_rows("openai/gsm8k", "main", split, n, held_out_split="test")
     return [
         Example(
-            id=f"gsm8k-train-{i}",
+            id=f"gsm8k-{source}-{start + i}",
             prompt=f"{row['question']}\n\nReason step by step, then end with a final line of the form 'Answer: <number>'.",
             reference=as_number(row["answer"].split("####")[-1].strip()),
         )
@@ -86,8 +99,8 @@ TEMPLATES = [
 JSON_KEYS = ("name", "age", "city", "email")
 
 
-def json_examples(n: int, seed: str = "survey") -> list[Example]:
-    rng = random.Random(seed)
+def json_examples(split: Split, n: int) -> list[Example]:
+    rng = random.Random(split)
     examples = []
     for i in range(n):
         first, last = rng.choice(FIRST), rng.choice(LAST)
@@ -100,7 +113,7 @@ def json_examples(n: int, seed: str = "survey") -> list[Example]:
         text = rng.choice(TEMPLATES).format(**record)
         examples.append(
             Example(
-                id=f"json-{seed}-{i}",
+                id=f"json-{split}-{i}",
                 prompt=(
                     f"Text: {text}\n\nExtract a JSON object with exactly these keys: "
                     "name (string), age (integer), city (string), email (string). "
@@ -143,13 +156,11 @@ def contains_alias(aliases: list[str], text: str) -> bool:
     return any(f" {normalize(alias)} " in haystack for alias in aliases if normalize(alias))
 
 
-def short_examples(n: int) -> list[Example]:
-    from datasets import load_dataset
-
-    rows = load_dataset("google-research-datasets/nq_open", split="train").shuffle(seed=0).select(range(n))
+def short_examples(split: Split, n: int) -> list[Example]:
+    source, start, rows = dataset_rows("google-research-datasets/nq_open", None, split, n, held_out_split="validation")
     return [
         Example(
-            id=f"nq-train-{i}",
+            id=f"nq-{source}-{start + i}",
             prompt=f"Question: {row['question']}?\n\nAnswer in at most {WORD_LIMIT} words.",
             reference=list(row["answer"]),
         )

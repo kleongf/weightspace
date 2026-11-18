@@ -51,7 +51,21 @@ def test_unclosed_reasoning_has_no_answer():
 
 
 def test_json_examples_are_reproducible_and_answerable():
-    first, again = json_examples(20), json_examples(20)
+    first, again = json_examples("practice", 20), json_examples("practice", 20)
     assert first == again
     for example in first:
         assert all(str(value) in example.prompt for value in example.reference.values())
+
+
+@pytest.mark.parametrize("name", sorted(TASKS))
+def test_splits_never_share_a_prompt(name):
+    task = TASKS[name]
+    survey, practice, held_out = (
+        {e.prompt for e in task.examples(split, n)} for split, n in [("survey", 40), ("practice", 100), ("held-out", 300)]
+    )
+    assert not survey & practice and not survey & held_out and not practice & held_out
+
+
+def test_survey_cannot_reach_into_practice_examples():
+    with pytest.raises(ValueError):
+        TASKS["gsm8k-answer-line"].examples("survey", 41)

@@ -56,4 +56,4 @@ def test_list_shows_status_and_progress(lab, capsys):
     main(["new", "loop-repair"])
     capsys.readouterr()
     main(["list"])
-    assert "0001-loop-repair  draft  runs=0  unfilled=11" in capsys.readouterr().out
+    assert "0001-loop-repair  draft  runs=0  unfilled=12" in capsys.readouterr().out

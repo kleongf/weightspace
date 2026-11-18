@@ -19,9 +19,9 @@ tests/               checks that keep Experiments fair (card rules, Eval budget,
 ## Rules of a fair Experiment
 
 1. Write and commit the card before Run 1. After that, change it only by appending to its Amendments section.
-2. The Editor never sees the Held-out set.
-3. Every Run has a hard Eval budget and spend cap.
-4. A result counts only if it beats a same-size Random-edit control on the Held-out set, with paired statistics.
+2. The Editor never sees the Held-out set. It runs outside this repo with only its tools (see [ADR 0002](docs/adr/0002-isolated-editor.md)).
+3. Every Run has a hard Eval budget, turn limit and spend cap.
+4. A result counts only if it meets the card's Success criterion against its Random-edit controls on the Held-out set.
 
 `uv run pytest` checks the rules that can be checked automatically.
 

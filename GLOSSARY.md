@@ -73,3 +73,7 @@ _Avoid_: study, trial
 **Run**:
 One Editor session within an Experiment, from Baseline to final Patch.
 _Avoid_: attempt, episode, session
+
+**Survey**:
+A scoring of the Baseline on candidate tasks, used to choose an Experiment's task before its card is frozen.
+_Avoid_: benchmark, sweep

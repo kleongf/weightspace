@@ -73,3 +73,5 @@ The hypothesis is confirmed when the final Patch's Held-out Strict score beats t
 Append-only after Run 1. Date each entry.
 
 2026-11-18, before Run 1. The dry run settled the Spend cap question: `--max-budget-usd` stops a subscription session, which ends with `error_max_budget_usd`. Claude checks the cap after each model turn, so a Run can pass the cap by one turn's cost (a $0.01 cap stopped at $0.07). The MCP server's fallback check is not needed.
+
+2026-11-18, before Run 1. Disk limits added to the harness, because this Mac has little free disk. Only the Patch that can still become the final Patch is kept on disk: the best Practice Strict so far, the later on a tie. Every evaluation's outputs are kept. `evaluate` refuses, spending no evaluation, a Patch whose uncompressed size (16 bytes per changed weight) would leave less than 1 GB of disk free. A final Patch over 50 MB stays in `~/weightspace-runs/`, and the repo's record names it by size and SHA-256. `ws run` will not start a real Run on battery or with less than 3 GB free. The Mac is kept awake during a Run, and `outcome.json` records any time it slept. None of this changes what is scored.

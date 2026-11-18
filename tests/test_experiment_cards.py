@@ -43,4 +43,4 @@ def test_frozen_experiment_can_launch_an_editor(path: Path):
     for config in (plan.session, replace(plan.session, **DRY)):
         text = prompt(path.parent, config)
         assert "$" not in text and str(config.max_tokens) in text
-    assert plan.session.eval_budget <= 100 and plan.spend_cap_usd > 0
+    assert plan.editors and plan.session.eval_budget <= 100

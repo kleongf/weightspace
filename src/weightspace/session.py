@@ -23,6 +23,8 @@ SNAPSHOT_TIMEOUT = 600
 GENERATE_TIMEOUT = 3600
 INTERRUPT_GRACE = 30
 SHOWN_CHARACTERS = 300
+# Disk a Run always leaves free. A Patch that would eat into it is refused before it is written.
+DISK_RESERVE = 10**9
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,12 @@ def sandbox_profile(sandbox: Path) -> str:
 (deny file-write*)
 (allow file-write* (subpath "{sandbox.resolve()}") (subpath "{user_temp}") (literal "/dev/null"))
 """
+
+
+def clone(source: Path, target: Path) -> None:
+    """Copy a file as an APFS clone, which shares disk blocks with the source until either changes."""
+    if subprocess.run(["/bin/cp", "-c", str(source), str(target)], capture_output=True).returncode:
+        shutil.copy(source, target)
 
 
 class WorkerDied(Exception):
@@ -137,6 +145,7 @@ class Session:
         (self.run_dir / "evals").mkdir(exist_ok=True)
         self.turns = 0
         self.evaluations = 0
+        self.best: tuple[int, float] | None = None  # (evaluation, Practice Strict) of the only Patch kept
         self.worker: Worker | None = None
 
     def python(self, code: str) -> str:
@@ -162,7 +171,8 @@ class Session:
         number = self.evaluations + 1
         name = f"{number:02d}.patch.npz"
         try:
-            saved = self._worker().request({"op": "snapshot", "path": name}, SNAPSHOT_TIMEOUT)
+            room = shutil.disk_usage(self.run_dir).free - DISK_RESERVE
+            saved = self._worker().request({"op": "snapshot", "path": name, "max_bytes": room}, SNAPSHOT_TIMEOUT)
             if "error" in saved:
                 return self._log("evaluate", arguments, f"Not evaluated, and no evaluation spent: {saved['error']}")
             examples = [self.practice[i] for i in ids]
@@ -183,18 +193,34 @@ class Session:
             return self._log("evaluate", arguments, f"Not evaluated, and no evaluation spent: {reply['error']}")
         self.evaluations = number
         shutil.move(self.sandbox / name, self.run_dir / "evals" / name)
-        shutil.copy(self.run_dir / "evals" / name, self.sandbox / "evals" / name)
         rows = [self._score(e, Completion(**c)) for e, c in zip(examples, reply["completions"])]
         for folder in (self.run_dir, self.sandbox):
             (folder / "evals" / f"{number:02d}.jsonl").write_text("".join(json.dumps(row) + "\n" for row in rows))
+        strict = sum(r["strict"] for r in rows) / len(rows)
+        kept = self._keep_if_best(number, strict)
         record = {
             "evaluation": number,
-            "strict": sum(r["strict"] for r in rows) / len(rows),
+            "strict": strict,
             "lenient": sum(r["lenient"] for r in rows) / len(rows),
-            "patch": f"evals/{name}",
+            "patch": f"evals/{name}" if kept else None,
             "patch_size": saved["size"],
+            "best": self.best[0],
         }
         return self._log("evaluate", arguments, self._report(record, rows), record)
+
+    def _keep_if_best(self, number: int, strict: float) -> bool:
+        """Keep only the Patch that can still become the final Patch: the highest Practice Strict, the later on a tie."""
+        name = f"{number:02d}.patch.npz"
+        if self.best is not None and strict < self.best[1]:
+            (self.run_dir / "evals" / name).unlink()
+            return False
+        if self.best is not None:
+            old = f"{self.best[0]:02d}.patch.npz"
+            (self.run_dir / "evals" / old).unlink()
+            (self.sandbox / "evals" / old).unlink(missing_ok=True)
+        self.best = (number, strict)
+        clone(self.run_dir / "evals" / name, self.sandbox / "evals" / name)
+        return True
 
     def close(self) -> None:
         if self.worker:
@@ -241,7 +267,7 @@ class Session:
             self.worker = None
         return (
             f"{why}, so the sandbox restarts from the Baseline weights on your next call and your edits are lost. "
-            "Each evaluated Patch is saved in evals/ in your sandbox folder; reapply one with apply(model, Patch.load(path))."
+            "The best evaluated Patch so far is saved in evals/ in your sandbox folder; reapply it with apply(model, Patch.load(path))."
         )
 
     def _score(self, example: Example, completion: Completion) -> dict:
@@ -263,6 +289,10 @@ class Session:
         for r in rows:
             shown = r["answer"] if r["finished"] and r["answer"] is not None else f"(cut off) ...{r['text'][-SHOWN_CHARACTERS:]}"
             lines.append(f"{r['id']} strict={r['strict']:.0f} lenient={r['lenient']:.2f} tokens={r['tokens']}: {shown[:SHOWN_CHARACTERS]!r}")
+        if record["patch"]:
+            lines.append(f"Patch kept as {record['patch']}, the best so far; earlier Patches are deleted.")
+        else:
+            lines.append(f"Patch not kept: evaluation {record['best']} scored higher, and its Patch stays in evals/.")
         lines.append(f"Full outputs: evals/{record['evaluation']:02d}.jsonl in your sandbox folder.")
         return "\n".join(lines)
 

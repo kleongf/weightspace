@@ -22,5 +22,8 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-m 'not slow'"
-markers = ["slow: runs the real Target (minutes); select with -m slow"]
+addopts = "-m 'not slow and not editor'"
+markers = [
+    "slow: runs the real Target (minutes); select with -m slow",
+    "editor: runs each Editor CLI live on your subscriptions; select with -m editor",
+]

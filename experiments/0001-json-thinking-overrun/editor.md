@@ -19,4 +19,4 @@ Rules:
 
 How the result is judged: the final Patch is the evaluated state with the highest Practice Strict score, the later one on a tie. Edits made after your last `evaluate` never count. That Patch is then scored on Held-out examples you never see, against random edits of the same size at random positions in the same tensors. A Patch that only fits the Practice examples will fail, so aim for a change in how the model reasons.
 
-When you are done or the limits are reached, reply with a short summary of what you changed and why.
+No one will answer questions during the Run, so work on your own. When you are done or the limits are reached, reply with a short summary of what you changed and why.

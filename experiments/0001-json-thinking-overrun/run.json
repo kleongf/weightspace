@@ -1,6 +1,7 @@
 {
-  "editor_model": "claude-opus-5-5",
-  "spend_cap_usd": 20,
+  "editors": {
+    "claude": {"model": "claude-opus-5-5", "effort": "high", "spend_cap_usd": 20}
+  },
   "session": {
     "task": "json-extraction",
     "model": "models/Qwen3.5-0.8B",

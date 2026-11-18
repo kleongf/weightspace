@@ -72,8 +72,9 @@ def run_cell(code: str, namespace: dict) -> str:
     return clip(out.getvalue())
 
 
-def snapshot(model: nn.Module, model_path: str, path: str) -> dict:
-    """Save the Patch from the Baseline to the live weights. The Baseline is reloaded lazily, one tensor at a time."""
+def snapshot(model: nn.Module, model_path: str, path: str, max_bytes: int) -> dict:
+    """Save the Patch from the Baseline to the live weights, unless its uncompressed size passes `max_bytes`.
+    The Baseline is reloaded lazily, one tensor at a time."""
     live = parameters(model)
     baseline = dict(tree_flatten(load(model_path, lazy=True)[0].parameters()))
     if live.keys() != baseline.keys():
@@ -86,6 +87,12 @@ def snapshot(model: nn.Module, model_path: str, path: str) -> dict:
             raise ValueError(f"{name} must keep shape {old.shape} and dtype {old.dtype}, but it is {new.shape} {new.dtype}")
         edits.update(diff({name: old}, {name: new}).edits)
     patch = Patch(edits)
+    needed = sum(part.nbytes for edit in edits.values() for part in (edit.indices, edit.before, edit.after))
+    if needed > max_bytes:
+        raise ValueError(
+            f"this Patch changes {patch.size:,} weights and needs up to {needed / 1e9:.1f} GB of disk, "
+            f"but only {max(max_bytes, 0) / 1e9:.1f} GB can be spared; make a smaller edit"
+        )
     patch.save(path)
     return {"size": patch.size, "tensors": len(edits)}
 
@@ -122,7 +129,7 @@ def main() -> None:
             elif op == "exec":
                 reply = {"output": run_cell(message["code"], namespace)}
             elif op == "snapshot":
-                reply = snapshot(target.model, model_path, message["path"])
+                reply = snapshot(target.model, model_path, message["path"], message["max_bytes"])
             elif op == "generate":
                 completions = target.complete(
                     message["prompts"],

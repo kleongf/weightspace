@@ -1,6 +1,11 @@
-"""The MCP server a Run's Editor talks to. Usage: python -m weightspace.server <run folder holding config.json>"""
+"""The MCP server a Run's Editor talks to.
+
+Usage: python -m weightspace.server <run folder holding config.json> [<port> <secret path>]
+With a port it serves streamable HTTP on 127.0.0.1 at that secret path; without one it serves stdio.
+"""
 
 import sys
+import threading
 from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
@@ -11,6 +16,7 @@ from weightspace.session import RunConfig, Session
 def build(session: Session) -> MCPServer:
     config = session.config
     server = MCPServer("weightspace")
+    one_at_a_time = threading.Lock()
 
     @server.tool(
         description=(
@@ -21,12 +27,13 @@ def build(session: Session) -> MCPServer:
             "off at max_tokens), tokens and looped. "
             "`practice` lists the Practice set as dicts with id, prompt and reference; it is also in practice.json. "
             "Edit weights in place, for example with model.update(...). Only weight values count: keep every tensor's name, "
-            "shape and dtype. Gradients are banned. Files you write stay in your sandbox folder, where evals/ holds each "
-            f"evaluation's Patch and full outputs. A call stops after {config.sandbox_timeout / 60:.0f} minutes."
+            "shape and dtype. Gradients are banned. Files you write stay in your sandbox folder, where evals/ holds the best "
+            f"evaluated Patch so far and every evaluation's full outputs. A call stops after {config.sandbox_timeout / 60:.0f} minutes."
         )
     )
     def python(code: str) -> str:
-        return session.python(code)
+        with one_at_a_time:
+            return session.python(code)
 
     @server.tool(
         description=(
@@ -36,7 +43,8 @@ def build(session: Session) -> MCPServer:
         )
     )
     def evaluate(example_ids: list[str] | None = None) -> str:
-        return session.evaluate(example_ids)
+        with one_at_a_time:
+            return session.evaluate(example_ids)
 
     return server
 
@@ -45,7 +53,11 @@ def main() -> None:
     run_dir = Path(sys.argv[1]).resolve()
     session = Session(run_dir, RunConfig.load(run_dir / "config.json"))
     try:
-        build(session).run()
+        if len(sys.argv) > 2:
+            port, path = int(sys.argv[2]), sys.argv[3]
+            build(session).run("streamable-http", host="127.0.0.1", port=port, streamable_http_path=path, session_idle_timeout=None)
+        else:
+            build(session).run()
     finally:
         session.close()
 

@@ -34,6 +34,14 @@ def config(**changes) -> RunConfig:
     return RunConfig(**{**settings, **changes})
 
 
+@pytest.fixture(scope="module", autouse=True)
+def no_disk_reserve():
+    """These tests check the sandbox, not the disk guard, which has its own test. Swap can leave this Mac under 1 GB."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr("weightspace.session.DISK_RESERVE", 0)
+        yield
+
+
 @pytest.fixture(scope="module")
 def session(tmp_path_factory):
     s = Session(tmp_path_factory.mktemp("run"), config())
@@ -98,7 +106,35 @@ def test_evaluate_records_the_patch_and_spends_the_budget(session):
     assert report.startswith("Evaluation 1 of 2 (1 left)")
     assert Patch.load(session.run_dir / "evals" / "01.patch.npz").size == 1
     session.evaluate(["json-practice-2"])
+    assert not (session.run_dir / "evals" / "01.patch.npz").exists(), "a tie keeps only the later Patch"
+    assert (session.run_dir / "evals" / "02.patch.npz").exists()
     assert "budget of 2 is spent" in session.evaluate()
+
+
+def test_a_patch_that_scores_lower_than_the_best_is_not_kept(tmp_path):
+    s = Session(tmp_path, config(max_tokens=96))
+    try:
+        s.evaluate()
+        assert s.best[1] > 0, "the Baseline must score above zero for this test to mean anything"
+        s.python("n = model.language_model.model.norm\nn.weight = mx.zeros_like(n.weight)")
+        assert "Patch not kept: evaluation 1 scored higher" in s.evaluate()
+        assert sorted(p.name for p in (tmp_path / "evals").glob("*.patch.npz")) == ["01.patch.npz"]
+        assert sorted(p.name for p in (tmp_path / "sandbox" / "evals").glob("*.patch.npz")) == ["01.patch.npz"]
+    finally:
+        s.close()
+
+
+def test_a_patch_too_big_for_the_disk_is_refused_without_spending(tmp_path, monkeypatch):
+    import weightspace.session
+
+    monkeypatch.setattr(weightspace.session, "DISK_RESERVE", 10**15)
+    s = Session(tmp_path, config())
+    try:
+        s.python(f"w = {GATE}.weight\nw[0, 0] = 1.0\n{GATE}.weight = w")
+        assert "make a smaller edit" in s.evaluate()
+        assert s.evaluations == 0 and not list(tmp_path.rglob("*.patch.npz"))
+    finally:
+        s.close()
 
 
 def test_evaluate_refuses_a_dtype_change_without_spending(tmp_path):

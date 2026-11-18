@@ -1,0 +1,17 @@
+{
+  "editor_model": "claude-opus-5-5",
+  "spend_cap_usd": 20,
+  "session": {
+    "task": "json-extraction",
+    "model": "models/Qwen3.5-0.8B",
+    "thinking": true,
+    "sampled": true,
+    "max_tokens": 2048,
+    "batch_size": 4,
+    "practice_size": 160,
+    "eval_size": 16,
+    "eval_budget": 30,
+    "turn_limit": 60,
+    "sandbox_timeout": 600
+  }
+}

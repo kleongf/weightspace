@@ -33,9 +33,12 @@ uv run ws new <slug>         start an Experiment from the card template
 uv run ws freeze <number>    lock a filled card before Run 1 (refuses unfilled sections)
 uv run ws list               every Experiment with its status, Run count and unfilled sections
 uv run ws survey             score the Baseline on every candidate task, with thinking off and on
+uv run ws run <number>       start a Run: a headless Editor (claude -p) with only the sandbox and evaluate
 ```
 
 `ws survey` writes a table to `surveys/` and every completion to `surveys/raw/` (git-ignored). It expects the Target in `models/Qwen3.5-0.8B`, downloaded from Hugging Face.
+
+`ws run` reads the Experiment's `run.json` and `editor.md`, works in `~/weightspace-runs/` (outside the repo, per ADR 0002), and copies the record into the Experiment's `runs/` when the Editor stops. `ws run <number> --dry-run` checks the plumbing with 2 turns and one 2-example evaluation, and keeps nothing in the repo.
 
 ## Machine
 

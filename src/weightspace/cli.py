@@ -87,6 +87,21 @@ def run_survey(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_editor(args: argparse.Namespace) -> int:
+    from weightspace.run import Plan, launch
+
+    folder = find(args.experiment)
+    if card.status((folder / "card.md").read_text()) != "frozen" and not args.dry_run:
+        raise CliError(f"{folder.name} is a draft; freeze and commit its card before Run 1")
+    plan = Plan.load(folder / "run.json")
+    if args.budget_usd is not None:
+        plan = Plan(plan.editor_model, args.budget_usd, plan.session)
+    run_dir, outcome = launch(folder, plan, args.dry_run)
+    print(f"run folder {run_dir}")
+    print(f"result {outcome.get('subtype', 'missing')}, cost ${outcome.get('total_cost_usd', 0):.2f}, {outcome.get('num_turns', 0)} turns")
+    return 0 if outcome.get("subtype") == "success" else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ws", description="Run weightspace experiments.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -100,10 +115,16 @@ def main(argv: list[str] | None = None) -> int:
     survey_parser.add_argument("--thinking", choices=["off", "on", "both"], default="both")
     survey_parser.add_argument("--batch-size", type=int, default=4, help="larger is faster but swaps on 16 GB")
     survey_parser.add_argument("--sampled", action="store_true", help="use Qwen's recommended sampling instead of greedy")
+    run_parser = commands.add_parser("run", help="start a Run: a headless Editor with only the sandbox and evaluate")
+    run_parser.add_argument("experiment")
+    run_parser.add_argument("--dry-run", action="store_true", help="2 turns, 1 tiny evaluation, kept outside the experiment")
+    run_parser.add_argument("--budget-usd", type=float, default=None, help="override the card's Spend cap")
     args = parser.parse_args(argv)
     try:
         if args.command == "survey":
             return run_survey(args)
+        if args.command == "run":
+            return run_editor(args)
         if args.command == "new":
             print(f"created {new(args.slug)}")
         elif args.command == "freeze":

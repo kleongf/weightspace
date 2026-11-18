@@ -29,3 +29,18 @@ def test_frozen_card_is_filled(path: Path):
     if card.status(text) != "frozen":
         pytest.skip("draft")
     assert not card.unfilled(text, TEMPLATE), f"{path.parent.name} is frozen with unfilled sections"
+
+
+@pytest.mark.parametrize("path", CARDS, ids=lambda p: p.parent.name)
+def test_frozen_experiment_can_launch_an_editor(path: Path):
+    from dataclasses import replace
+
+    from weightspace.run import DRY, Plan, prompt
+
+    if card.status(path.read_text()) != "frozen":
+        pytest.skip("draft")
+    plan = Plan.load(path.parent / "run.json")
+    for config in (plan.session, replace(plan.session, **DRY)):
+        text = prompt(path.parent, config)
+        assert "$" not in text and str(config.max_tokens) in text
+    assert plan.session.eval_budget <= 100 and plan.spend_cap_usd > 0

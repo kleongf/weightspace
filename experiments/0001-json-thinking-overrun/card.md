@@ -71,3 +71,5 @@ The hypothesis is confirmed when the final Patch's Held-out Strict score beats t
 ## Amendments
 
 Append-only after Run 1. Date each entry.
+
+2026-11-18, before Run 1. The dry run settled the Spend cap question: `--max-budget-usd` stops a subscription session, which ends with `error_max_budget_usd`. Claude checks the cap after each model turn, so a Run can pass the cap by one turn's cost (a $0.01 cap stopped at $0.07). The MCP server's fallback check is not needed.

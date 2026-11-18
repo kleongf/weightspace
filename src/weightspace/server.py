@@ -16,7 +16,9 @@ def build(session: Session) -> MCPServer:
         description=(
             "Run Python in your persistent sandbox; variables persist between calls and a final expression's value is shown. "
             "`model` is the Target as an mlx module and `tokenizer` its tokenizer. "
-            "`target.complete(prompts, thinking=..., max_tokens=..., sampled=...)` generates text. "
+            "`target.complete(prompts, thinking=..., max_tokens=..., sampled=...)` generates text and returns a list of "
+            "Completion objects with fields text, answer (the text after </think>, or None), finished (False when cut "
+            "off at max_tokens), tokens and looped. "
             "`practice` lists the Practice set as dicts with id, prompt and reference; it is also in practice.json. "
             "Edit weights in place, for example with model.update(...). Only weight values count: keep every tensor's name, "
             "shape and dtype. Gradients are banned. Files you write stay in your sandbox folder, where evals/ holds each "
